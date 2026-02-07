@@ -1,5 +1,7 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
+import { connectDB } from "@/lib/db/mongoose";
+import { User } from "@/lib/db/models/user";
 
 export async function POST(req) {
   const SIGNING_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -34,21 +36,28 @@ export async function POST(req) {
     return new Response("Webhook verification failed", { status: 400 });
   }
 
-  const { id } = evt.data;
+  await connectDB();
+
   const eventType = evt.type;
+  const data = evt.data;
 
   switch (eventType) {
     case "user.created":
-      // TODO: Save user to your database
-      console.log("User created:", id);
-      break;
     case "user.updated":
-      // TODO: Update user in your database
-      console.log("User updated:", id);
+      await User.findOneAndUpdate(
+        { clerkId: data.id },
+        {
+          clerkId: data.id,
+          email: data.email_addresses?.[0]?.email_address || "",
+          firstName: data.first_name || "",
+          lastName: data.last_name || "",
+          imageUrl: data.image_url || "",
+        },
+        { upsert: true, new: true }
+      );
       break;
     case "user.deleted":
-      // TODO: Delete user from your database
-      console.log("User deleted:", id);
+      await User.findOneAndDelete({ clerkId: data.id });
       break;
     default:
       console.log("Unhandled webhook event:", eventType);
