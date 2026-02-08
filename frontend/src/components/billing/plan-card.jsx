@@ -19,6 +19,11 @@ export function PlanCard({ name, price, features, isCurrent, planKey }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: planKey }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Payment failed. Please try again.');
+        return;
+      }
       const data = await res.json();
       if (data.paymentUrl) {
         router.push(data.paymentUrl);

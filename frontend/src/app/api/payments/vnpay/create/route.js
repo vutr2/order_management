@@ -8,35 +8,43 @@ const PLAN_PRICES = {
 };
 
 export async function POST(req) {
-  const { userId } = await auth();
-  if (!userId) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { plan } = await req.json();
+    if (!PLAN_PRICES[plan]) {
+      return Response.json({ error: 'Invalid plan' }, { status: 400 });
+    }
+
+    const amount = PLAN_PRICES[plan];
+    const txnRef = `${userId.slice(-8)}_${Date.now()}`;
+
+    await createPayment(userId, {
+      amount,
+      plan,
+      vnpayTxnRef: txnRef,
+      status: 'pending',
+    });
+
+    const ipAddr =
+      req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
+
+    const paymentUrl = createPaymentUrl({
+      orderId: txnRef,
+      amount,
+      orderInfo: `OrderHub ${plan} subscription`,
+      ipAddr,
+    });
+
+    return Response.json({ paymentUrl });
+  } catch (error) {
+    console.error('VNPay create error:', error);
+    const message = error.message?.includes('environment variable')
+      ? 'Payment gateway is not configured. Please contact support.'
+      : 'Failed to create payment. Please try again.';
+    return Response.json({ error: message }, { status: 500 });
   }
-
-  const { plan } = await req.json();
-  if (!PLAN_PRICES[plan]) {
-    return Response.json({ error: 'Invalid plan' }, { status: 400 });
-  }
-
-  const amount = PLAN_PRICES[plan];
-  const txnRef = `${userId.slice(-8)}_${Date.now()}`;
-
-  await createPayment(userId, {
-    amount,
-    plan,
-    vnpayTxnRef: txnRef,
-    status: 'pending',
-  });
-
-  const ipAddr =
-    req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
-
-  const paymentUrl = createPaymentUrl({
-    orderId: txnRef,
-    amount,
-    orderInfo: `OrderHub ${plan} subscription`,
-    ipAddr,
-  });
-
-  return Response.json({ paymentUrl });
 }

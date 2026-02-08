@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
-const VNP_TMN_CODE = () => process.env.VNP_TMN_CODE;
-const VNP_HASH_SECRET = () => process.env.VNP_HASH_SECRET;
+const VNP_TMN_CODE = () => process.env.VNPAY_TMN_CODE;
+const VNP_HASH_SECRET = () => process.env.VNPAY_HASH_SECRET;
 const VNP_URL = () =>
   process.env.VNP_URL || 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
 const VNP_RETURN_URL = () =>
